@@ -19,13 +19,13 @@ null_f = lambda x: x
 
 def test_run(n, approximator, env, render=False):
     for i in range(n):
-        state = torch.tensor(env.reset())
+        state = torch.tensor(env.reset(), dtype=torch.float32)
         done = False
         rewards = []
         while not done:
             state, reward, done, _ = env.step(approximator.get_action(state))
             rewards.append(reward)
-            state = torch.tensor(state)
+            state = torch.tensor(state, dtype=torch.float32)
             if render:
                 env.render()
         print(f"For {i}, {sum(rewards):3.3f}")

@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from time import time
-
 import numpy as np
 
 import os
@@ -31,7 +29,7 @@ ACT_SPACE_SIZE = 2
 OBS_SPACE_SIZE = 4
 
 class DQN(nn.Module):
-    def __init__(self, name=None, criterion=nn.MSELoss, epsilon=-1):
+    def __init__(self, name=None, criterion=nn.MSELoss, epsilon=1):
         super(DQN, self).__init__()
 
         self.name = name
@@ -68,6 +66,27 @@ class DQN(nn.Module):
         self.criterion = criterion()
         self.chooser = torch.utils.data.WeightedRandomSampler
         self.training = True
+
+        self.buffer = ExperienceBuffer(100000, OBS_SPACE_SIZE)
+
+        self.target = nn.Sequential(
+                nn.Linear(OBS_SPACE_SIZE, 128),
+                nn.BatchNorm1d(128),
+                nn.LeakyReLU(),
+                nn.Linear(128, 128),
+                nn.BatchNorm1d(128),
+                nn.LeakyReLU(),
+                nn.Linear(128, 128),
+                nn.BatchNorm1d(128),
+                nn.LeakyReLU(),
+                nn.Linear(128, ACT_SPACE_SIZE),
+            )
+
+        self.optimizer = optim.Adam(self.network.parameters())
+        self.target.to(DEVICE)
+        self.target.load_state_dict(self.network.state_dict())
+        self.target.requires_grad_(False)
+        self.train_counter = 0
 
     def save(self, name=None):
         if not name:
@@ -116,7 +135,6 @@ class DQN(nn.Module):
         self.log.flush()
 
     def predict(self, X):
-        #X = torch.tensor(X).to(DEVICE)
         return self.network(X.to(DEVICE))
 
     def get_action(self, X):
@@ -152,68 +170,10 @@ class DQN(nn.Module):
         val, _ = torch.max(X, dim=1)
         return val
 
-class BufferedDQN(DQN):
-    def __init__(self, name=None, criterion=nn.MSELoss, epsilon=1):
-        super(BufferedDQN, self).__init__(name, criterion, epsilon)
-
-        self.buffer = ExperienceBuffer(100000, OBS_SPACE_SIZE)
-
-        self.target = nn.Sequential(
-                nn.Linear(OBS_SPACE_SIZE, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, ACT_SPACE_SIZE),
-            )
-
-        self.optimizer = optim.Adam(self.network.parameters())
-        self.target.to(DEVICE)
-        self.target.load_state_dict(self.network.state_dict())
-        self.target.requires_grad_(False)
-        self.train_counter = 0
-
-        self.train_head = ['iter', 'add', 'zero', 'getrand', 'oldpred', 'gather', 'newpred', 'newmax', 'targ', 'crt', 'back', 'apply']
-        self.train_cum = [0 for _ in range(len(self.train_head) - 1)]
-        self.train_time = [[] for _ in range(len(self.train_head) - 1)]
-        self.train_count = 0
-        self.log_count = 0
-        self.train_log = open(os.path.join(LOG_DIRECTORY, f"{name}_timedeets.csv"), 'w')
-        self.train_log.write(",".join(self.train_head) + '\n')
-
-        self.then = time()
-        self.times = []
-        self.framecount = 0
-
-    def timelog(self):
-        self.log_count += 1
-        self.train_cum = [str(x / 1000) for x in self.train_cum]
-        self.train_log.write(str(self.log_count) + "," + ",".join(self.train_cum) + '\n')
-        for elem in range(len(self.train_cum)):
-            self.train_time[elem].append(self.train_cum[elem])
-            self.train_cum[elem] = 0
-        self.train_log.flush()
-
     def train(self, prev_state, action, state, reward, done):
         self.network.train()
-        self.train_count += 1
-        self.framecount += 1
-        if self.framecount % 10000 == 0:
-            self.times.append(int(time() - self.then))
-            self.then = time()
-            #print(f"After {self.framecount} frames, we have {self.times}")
 
-        if self.train_count % 1000 == 0:
-            self.timelog()
-            self.train_count = 0
-        now = time()
         self.buffer.add_state(prev_state, reward, action, done)
-        time_pass = time() - now
-        self.train_cum[0] += time_pass
         if not self.buffer.ok_to_sample(BATCH_SIZE):
             return
     
@@ -223,81 +183,24 @@ class BufferedDQN(DQN):
             self.target.requires_grad_(False)
             self.train_counter = 0
 
-        now = time()
         self.optimizer.zero_grad()
-        time_pass = time() - now
-        self.train_cum[1] += time_pass
-
-        #if done:
-            #self.epsilon = max(self.epsilon*0.999, 0.1)
-        #self.epsilon = max(self.epsilon-((1-0.1)/500000), 0.1)
-
-
 
         #Neeed.... two q values to make this work... the one we're updating for and the future one's max value..
-        now = time()
         states, successors, actions, rewards, done_b = self.buffer.get_random(BATCH_SIZE)
-        time_pass = time() - now
-        self.train_cum[2] += time_pass
-        #actions = torch.unsqueeze(actions, 1)
-        #rewards = torch.unsqueeze(rewards, 1)
 
         #Dims should be batch_size, actions
-        now = time()
         old_q = self.predict(states)
-        time_pass = time() - now
-        self.train_cum[3] += time_pass
-        #print(f"old_q {old_q}")
-        #print(f"Actions {actions}")
-        now = time()
         old_q = torch.gather(old_q, 1, actions)
-        time_pass = time() - now
-        self.train_cum[4] += time_pass
-        #print(f"old_q {old_q}")
-        #new_q = self.predict(successors)
         with torch.no_grad():
-            now = time()
             new_q = self.target(successors)
-            time_pass = time() - now
-            self.train_cum[5] += time_pass
-            #print(f"new_q {new_q}")
-            now = time()
             new_q, _ = torch.max(new_q, dim=1, keepdims=True)
-            time_pass = time() - now
-            self.train_cum[6] += time_pass
-            #print(f"new_q {new_q}")
-            now = time()
-            targ = rewards + new_q * done_b#*0.5
-            time_pass = time() - now
-            self.train_cum[7] += time_pass
-            #print(f"done {done_b}")
-            #print(f"Rewards {rewards}")
-            #print(f"targ {targ}")
+            targ = rewards + new_q * done_b
 
-        #print(f"Max new_q is {torch.max(new_q)}")
-
-        now = time()
         loss = self.criterion(old_q, targ)
-        time_pass = time() - now
-        self.train_cum[8] += time_pass
 
-        now = time()
         loss.backward()
-        time_pass = time() - now
-        self.train_cum[9] += time_pass
 
-        now = time()
         self.optimizer.step()
-        time_pass = time() - now
-        self.train_cum[10] += time_pass
-
-        #del states
-        #del successors
-        #del actions
-        #del rewards
-        #del old_q
-        #del new_q
-        #del targ
 
         self.network.eval()
 
