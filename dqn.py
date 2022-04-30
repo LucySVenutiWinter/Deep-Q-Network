@@ -28,32 +28,63 @@ LOG_DIRECTORY = "logs"
 ACT_SPACE_SIZE = 2
 OBS_SPACE_SIZE = 4
 
+class ConvNet(nn.Module):
+    def __init__(self):
+        super(ConvNet, self).__init__()
+        #Input is four 240x320 arrays stacked together
+        #Pytorch wants these in CHW form (channels first)
+        #In: 4*240*320
+        self.conv1 = nn.Conv2D(in_channels=4,
+                out_channels=32,
+                kernel_size=8,
+                stride=4,
+                padding=2)
+        #32*60*80
+        self.mp1 = nn.MaxPool2d(2)
+        #32*30*40
+        self.bn1 = nn.BatchNorm1d(32)
+        self.conv2 = nn.Conv2D(32, 64, 4, 2, 1)
+        #64*15*20
+        self.bn2 = nn.BatchNorm1d(64)
+        self.conv3 = nn.Conv2D(64, 64, 3, 1)
+        #64*18*13
+        self.bn3 = nn.BatchNorm1d(64)
+        #64*18*13 is 14976, plus the two non-screen inputs
+        self.fc1 = nn.Linear(64*18*13+2, 512)
+        self.fc2 = nn.Linear(512, 3)
+        self.lrelu = nn.LeakyRelu()
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.mp1(out)
+        out = self.bn1(out)
+        out = self.lrelu(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.lrelu(out)
+        out = self.conv3(out)
+        out = self.bn3(out)
+        out = self.lrelu(out)
+        out = self.fc1(out)
+        out = self.lrelu(out)
+        out = self.fc2(out)
+
+        return out
+
 class DQN(nn.Module):
-    def __init__(self, name=None, criterion=nn.MSELoss, epsilon=1):
+    def __init__(self, name=None, criterion=nn.MSELoss, discount=0.99, buffer_size=1000000, epsilon_end=1000000):
         super(DQN, self).__init__()
 
         self.name = name
         self.log = None
-        self.last_loss = 0
 
-        self.network = nn.Sequential(
-                nn.Linear(OBS_SPACE_SIZE, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, ACT_SPACE_SIZE),
-            )
+        self.network = ConvNet()
             
         self.optimizer = optim.Adam(self.parameters())
 
         if name==None or not os.path.exists(os.path.join(CHECKPOINT_DIRECTORY, name)):
             self.episode = 0
-            self.epsilon = DecayingValue(1, 1/500000, "arithmetic")
+            self.epsilon = DecayingValue(1, 1/epsilon_end, "arithmetic")
         else:
             self.load()
 
@@ -64,28 +95,24 @@ class DQN(nn.Module):
         self.to(DEVICE)
 
         self.criterion = criterion()
+        self.discount = discount
         self.chooser = torch.utils.data.WeightedRandomSampler
         self.training = True
 
-        self.buffer = ExperienceBuffer(100000, OBS_SPACE_SIZE)
+        self.buffer = ExperienceBuffer(buffer_size, OBS_SPACE_SIZE)
 
-        self.target = nn.Sequential(
-                nn.Linear(OBS_SPACE_SIZE, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, 128),
-                nn.BatchNorm1d(128),
-                nn.LeakyReLU(),
-                nn.Linear(128, ACT_SPACE_SIZE),
-            )
+        self.target = type(self.network)()
+        self.target.to(DEVICE)
+        print("thing")
+        print(self.target.requires_grad)
+        self.target.requires_grad_(False)
+        print("thing")
+        print(self.target.requires_grad)
+        self.target.load_state_dict(self.network.state_dict())
+        print("thing")
+        print(self.target.requires_grad)
 
         self.optimizer = optim.Adam(self.network.parameters())
-        self.target.to(DEVICE)
-        self.target.load_state_dict(self.network.state_dict())
-        self.target.requires_grad_(False)
         self.train_counter = 0
 
     def save(self, name=None):
@@ -179,6 +206,7 @@ class DQN(nn.Module):
     
         self.train_counter += 1
         if self.train_counter % 15000 == 0:
+            print("Don't forget this one")
             self.target.load_state_dict(self.network.state_dict())
             self.target.requires_grad_(False)
             self.train_counter = 0
@@ -194,7 +222,7 @@ class DQN(nn.Module):
         with torch.no_grad():
             new_q = self.target(successors)
             new_q, _ = torch.max(new_q, dim=1, keepdims=True)
-            targ = rewards + new_q * done_b
+            targ = rewards + new_q * done_b * self.discount
 
         loss = self.criterion(old_q, targ)
 

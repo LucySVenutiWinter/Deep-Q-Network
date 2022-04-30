@@ -17,6 +17,20 @@ except:
 #Default reward shaping/feature translation function
 null_f = lambda x: x
 
+def step_aggregator(env, action, steps=4):
+    aggregate = torch.tensor()
+    reward = 0
+    done = False
+    for _ in steps:
+        if not done:
+            state, reward_this_step, done, = env.step(action)
+        else:
+            reward_this_step = 0
+        reward += reward_this_step
+        aggregate = torch.cat((aggregate, state))
+
+    return aggregate, reward, done
+
 def test_run(n, approximator, env, render=False):
     for i in range(n):
         state = torch.tensor(env.reset(), dtype=torch.float32)
