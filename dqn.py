@@ -22,6 +22,10 @@ try:
 except:
     DEVICE = "cpu"
 
+DEVICE = "cpu"
+print("CPU DEV HARDCODED")
+
+
 CHECKPOINT_DIRECTORY = "checkpoints"
 LOG_DIRECTORY = "logs"
 
@@ -34,7 +38,7 @@ class ConvNet(nn.Module):
         #Input is four 240x320 arrays stacked together
         #Pytorch wants these in CHW form (channels first)
         #In: 4*240*320
-        self.conv1 = nn.Conv2D(in_channels=4,
+        self.conv1 = nn.Conv2d(in_channels=4,
                 out_channels=32,
                 kernel_size=8,
                 stride=4,
@@ -43,16 +47,16 @@ class ConvNet(nn.Module):
         self.mp1 = nn.MaxPool2d(2)
         #32*30*40
         self.bn1 = nn.BatchNorm1d(32)
-        self.conv2 = nn.Conv2D(32, 64, 4, 2, 1)
+        self.conv2 = nn.Conv2d(32, 64, 4, 2, 1)
         #64*15*20
         self.bn2 = nn.BatchNorm1d(64)
-        self.conv3 = nn.Conv2D(64, 64, 3, 1)
+        self.conv3 = nn.Conv2d(64, 64, 3, 1)
         #64*18*13
         self.bn3 = nn.BatchNorm1d(64)
         #64*18*13 is 14976, plus the two non-screen inputs
         self.fc1 = nn.Linear(64*18*13+2, 512)
         self.fc2 = nn.Linear(512, 3)
-        self.lrelu = nn.LeakyRelu()
+        self.lrelu = nn.LeakyReLU()
 
     def forward(self, x):
         out = self.conv1(x)
@@ -103,14 +107,14 @@ class DQN(nn.Module):
 
         self.target = type(self.network)()
         self.target.to(DEVICE)
-        print("thing")
-        print(self.target.requires_grad)
+        #print("req_natural")
+        #print(self.target.requires_grad_())
         self.target.requires_grad_(False)
-        print("thing")
-        print(self.target.requires_grad)
+        #print("req_setfalse")
+        #print(self.target.requires_grad_())
         self.target.load_state_dict(self.network.state_dict())
-        print("thing")
-        print(self.target.requires_grad)
+        #print("req_loaded")
+        #print(self.target.requires_grad_())
 
         self.optimizer = optim.Adam(self.network.parameters())
         self.train_counter = 0

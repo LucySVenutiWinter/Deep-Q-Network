@@ -14,32 +14,49 @@ try:
 except:
     DEVICE = "cpu"
 
+DEVICE = "cpu"
+print("CPU DEV HARDCODED")
+
 #Default reward shaping/feature translation function
 null_f = lambda x: x
 
-def step_aggregator(env, action, steps=4):
-    aggregate = torch.tensor()
-    reward = 0
-    done = False
-    for _ in steps:
-        if not done:
-            state, reward_this_step, done, = env.step(action)
-        else:
-            reward_this_step = 0
-        reward += reward_this_step
-        aggregate = torch.cat((aggregate, state))
+#Necessary for easy code alteration - sometimes states are tensors, but sometimes not.
+def state_to_device(state):
+    for key in state.keys():
+        state[key] = torch.tensor(state[key], dtype=torch.float32).to(DEVICE)
 
-    return aggregate, reward, done
+def step_aggregator(env, action, steps=4):
+    states = []
+    rewards = []
+    dones = []
+    infos = []
+    for _ in range(steps):
+        if not done:
+            state, reward, done, info = env.step(action)
+            print("STATE IS")
+            print(state)
+            raise Exception
+            state = state_to_device(state)
+        else:
+            reward = 0
+
+        states.append(state)
+        rewards.append(reward)
+        dones.append(dones)
+        infos.append(infos)
+
+    print(f"Aggregate {aggregate}")
+    return aggregate, reward, done, all_info
 
 def test_run(n, approximator, env, render=False):
     for i in range(n):
-        state = torch.tensor(env.reset(), dtype=torch.float32)
+        state = state_to_device(env.reset())
         done = False
         rewards = []
         while not done:
-            state, reward, done, _ = env.step(approximator.get_action(state))
+            state, reward, done, _ = step_aggregator(env, approximator.get_action(state))
             rewards.append(reward)
-            state = torch.tensor(state, dtype=torch.float32)
+            state = state_to_device(state)
             if render:
                 env.render()
         print(f"For {i}, {sum(rewards):3.3f}")
@@ -58,16 +75,16 @@ def train_episode(approximator, env, shape_f=null_f, feature_f=null_f, seed=None
         env.seed(seed)
     done = False
     state = env.reset()
-    state = torch.tensor(state, dtype=torch.float32)
+    state = state_to_device(state)
 
     reward_history = []
 
     while not done:
         action = approximator.get_action(feature_f(state).to(DEVICE))
-        new_state, reward, done, _ = env.step(action)
+        new_state, reward, done, _ = step_aggregator(env, action)
         if render:
             env.render()
-        new_state = torch.tensor(new_state, dtype=torch.float32).to(DEVICE)
+        new_state = state_to_device(new_state)
         action = torch.tensor(action).to(DEVICE)
         reward = torch.tensor(reward, dtype=torch.float32).to(DEVICE)
         approximator.train(feature_f(state), action, feature_f(new_state), shape_f(reward), done)
@@ -83,8 +100,8 @@ def train_episodes(num_episodes, approximator, env, shape_f=null_f, feature_f=nu
     done = False
     q_episode = []
     while not done:
-        q_episode.append(torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(DEVICE))
-        state, _, done, _ = env.step(env.action_space.sample())
+        q_episode.append(state_to_device(state))
+        state, _, done, _ = step_aggregator(env, env.action_space.sample())
 
     if seed:
         env.seed(seed)
