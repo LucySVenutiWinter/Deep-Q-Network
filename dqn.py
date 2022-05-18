@@ -2,14 +2,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-import os
-
-from functools import partial
-
 import random
+
+import os#Path manipulation and directory creation
+from functools import partial#Allows circlebuffer to operate only partially full
 
 import config
 
+#Set various hyperparameters based on config
 BATCH_SIZE = config.BATCH_SIZE
 STEPS = config.STEPS
 DEVICE = config.DEVICE
@@ -20,12 +20,14 @@ LOG_DIRECTORY = config.LOG
 ACT_SPACE_SIZE = config.ACT_SPACE
 OBS_SPACE_SIZE = 1*STEPS*240*320
 
+#The actual network class
 class ConvNet(nn.Module):
     def __init__(self):
         super(ConvNet, self).__init__()
-        #Input is four 240x320 arrays stacked together
+
+        #Input is STEPS 240x320 arrays stacked together
         #Pytorch wants these in CHW form (channels first)
-        #In: 4*240*320
+        #Input dimensions: (BATCH_SIZE, STEPS, 240, 320)
         self.conv1 = nn.Conv2d(in_channels=STEPS,
                 out_channels=32,
                 kernel_size=8,
@@ -38,7 +40,7 @@ class ConvNet(nn.Module):
         #64*15*20
         self.conv3 = nn.Conv2d(64, 64, 3, 1)
         #64*18*13
-        #64*18*13 is 14976
+        #(64*18*13 is 14976)
         self.fc1 = nn.Linear(64*18*13, 512)
         self.fc2 = nn.Linear(512, ACT_SPACE_SIZE)
         self.lrelu = nn.LeakyReLU()
