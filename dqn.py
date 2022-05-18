@@ -10,27 +10,17 @@ from functools import partial
 
 import random
 
-BATCH_SIZE = 32
+import config
 
-DEVICE = "cpu"
-
-try:
-    if torch.cuda.is_available():
-        DEVICE = "cuda"
-    else:
-        DEVICE = "cpu"
-except:
-    DEVICE = "cpu"
-
-#Comment out if you want to use CUDA - don't forget the twin in train.py
-DEVICE = "cpu"
-
+BATCH_SIZE = config.BATCH_SIZE
+STEPS = config.STEPS
+DEVICE = config.DEVICE
 
 CHECKPOINT_DIRECTORY = "checkpoints"
 LOG_DIRECTORY = "logs"
 
-ACT_SPACE_SIZE = 3
-OBS_SPACE_SIZE = 1*4*240*320
+ACT_SPACE_SIZE = config.ACT_SPACE
+OBS_SPACE_SIZE = 1*STEPS*240*320
 
 class ConvNet(nn.Module):
     def __init__(self):
@@ -38,7 +28,7 @@ class ConvNet(nn.Module):
         #Input is four 240x320 arrays stacked together
         #Pytorch wants these in CHW form (channels first)
         #In: 4*240*320
-        self.conv1 = nn.Conv2d(in_channels=4,
+        self.conv1 = nn.Conv2d(in_channels=STEPS,
                 out_channels=32,
                 kernel_size=8,
                 stride=4,
@@ -56,7 +46,7 @@ class ConvNet(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
     def forward(self, X):
-        img = torch.reshape(X, (-1, 4, 240, 320))
+        img = torch.reshape(X, (-1, STEPS, 240, 320))
         batch_size = img.shape[0]
         out = self.conv1(img)
         out = self.mp1(out)

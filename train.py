@@ -4,20 +4,10 @@ from time import time
 
 import torch as torch
 
-STEPS = 4
+import config
 
-DEVICE = "cpu"
-
-try:
-    if torch.cuda.is_available():
-        DEVICE = "cuda"
-    else:
-        DEVICE = "cpu"
-except:
-    DEVICE = "cpu"
-
-#Comment out if you want to use CUDA - don't forget the twin in dqn.py
-DEVICE = "cpu"
+STEPS = config.STEPS
+DEVICE = config.DEVICE
 
 #Default reward shaping/feature translation function
 null_f = lambda x: x
