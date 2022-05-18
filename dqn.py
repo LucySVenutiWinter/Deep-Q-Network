@@ -38,9 +38,9 @@ class ConvNet(nn.Module):
         #64*15*20
         self.conv3 = nn.Conv2d(64, 64, 3, 1)
         #64*18*13
-        #64*18*13 is 14976, plus the two non-screen inputs
+        #64*18*13 is 14976
         self.fc1 = nn.Linear(64*18*13, 512)
-        self.fc2 = nn.Linear(512, 3)
+        self.fc2 = nn.Linear(512, ACT_SPACE_SIZE)
         self.lrelu = nn.LeakyReLU()
 
     def forward(self, X):
