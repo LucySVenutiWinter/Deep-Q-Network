@@ -4,6 +4,8 @@ from time import time
 
 import torch as torch
 
+STEPS = 4
+
 DEVICE = "cpu"
 
 try:
@@ -24,41 +26,70 @@ null_f = lambda x: x
 def state_to_device(state):
     for key in state.keys():
         state[key] = torch.tensor(state[key], dtype=torch.float32).to(DEVICE)
+        if key == 'rgb':
+            state[key] = torch.permute(state[key], (2, 0, 1))
+            state[key] = torch.sum(state[key], 0)/(255*3)*2-1
+    return state
 
-def step_aggregator(env, action, steps=4):
+def resetter(env):
+    state = env.reset()
+    state = state_to_device(state)
+    states = [state, state, state, state]
+
+    rgb_states = [state['rgb'] for state in states]
+    rgb_states = torch.concat(rgb_states, 0)
+    #gamevar = states[-1]['gamevariables']
+    state = convert_to_input(rgb_states)#, gamevar)
+
+    return state
+
+def convert_to_input(rgb_states):#, gamevar):A
+    rgb_1d = torch.reshape(rgb_states, (-1, 1*STEPS*240*320))
+    #gv_1d = torch.reshape(gamevar, (-1, 2))
+    #states = torch.concat([rgb_1d, gv_1d], 1)
+    return torch.squeeze(rgb_1d)
+
+def step_aggregator(env, action):
     states = []
     rewards = []
-    dones = []
     infos = []
-    for _ in range(steps):
+    done = False
+    for _ in range(STEPS):
         if not done:
             state, reward, done, info = env.step(action)
-            print("STATE IS")
-            print(state)
-            raise Exception
             state = state_to_device(state)
         else:
             reward = 0
 
         states.append(state)
         rewards.append(reward)
-        dones.append(dones)
         infos.append(infos)
 
-    print(f"Aggregate {aggregate}")
-    return aggregate, reward, done, all_info
+    rgb_states = [state['rgb'] for state in states]
+    rgb_states = torch.concat(rgb_states, 0)
+    #gamevar = states[-1]['gamevariables']
+
+    states = convert_to_input(rgb_states)#, gamevar)
+    #print("RGB STATES ARE")
+    #print(rgb_states.shape)
+    #raise Exception
+    rewards = sum(rewards)
+    return states, rewards, done, infos
 
 def test_run(n, approximator, env, render=False):
     for i in range(n):
-        state = state_to_device(env.reset())
+        state = resetter(env)
         done = False
         rewards = []
         while not done:
+            now = time()
             state, reward, done, _ = step_aggregator(env, approximator.get_action(state))
             rewards.append(reward)
-            state = state_to_device(state)
+            #state = state_to_device(state)
             if render:
                 env.render()
+            while (time() - now) < 1/10:
+                pass
         print(f"For {i}, {sum(rewards):3.3f}")
 
 def train_episode(approximator, env, shape_f=null_f, feature_f=null_f, seed=None, render=False):
@@ -74,34 +105,34 @@ def train_episode(approximator, env, shape_f=null_f, feature_f=null_f, seed=None
     if seed:
         env.seed(seed)
     done = False
-    state = env.reset()
-    state = state_to_device(state)
+    state = resetter(env)
 
     reward_history = []
 
     while not done:
-        action = approximator.get_action(feature_f(state).to(DEVICE))
+        action = approximator.get_action(feature_f(state))
         new_state, reward, done, _ = step_aggregator(env, action)
         if render:
             env.render()
-        new_state = state_to_device(new_state)
+        #new_state = state_to_device(new_state)
         action = torch.tensor(action).to(DEVICE)
         reward = torch.tensor(reward, dtype=torch.float32).to(DEVICE)
         approximator.train(feature_f(state), action, feature_f(new_state), shape_f(reward), done)
         state=new_state
-        reward_history.append(float(reward))
+        reward_history.append(reward)
 
     return reward_history
 
 def train_episodes(num_episodes, approximator, env, shape_f=null_f, feature_f=null_f, seed=None, log=False, render=False):
     """Trains approximator for num_episodes. See train_episode for details on args.
     Seed is only set before the first episode, if passed."""
-    state = env.reset()
+    state = resetter(env)
     done = False
     q_episode = []
     while not done:
-        q_episode.append(state_to_device(state))
+        q_episode.append(state)
         state, _, done, _ = step_aggregator(env, env.action_space.sample())
+    q_episode.append(state)
 
     if seed:
         env.seed(seed)
@@ -116,7 +147,7 @@ def train_episodes(num_episodes, approximator, env, shape_f=null_f, feature_f=nu
         total_reward = sum(reward_history)
         frames += len(reward_history)
         tally += total_reward
-        print(f"Reward for {i} ({frames} frames): {total_reward:3.1f} (peak: {highest_tally:3.1f} prev: {last_tally:3.1f}) ({torch.cuda.memory_allocated()})", end='\r')
+        print(f"Reward for {i} ({frames} frames): {total_reward:3.1f} (peak: {highest_tally:3.1f} prev: {last_tally:3.1f}) ({torch.cuda.memory_allocated()}) ({approximator.episode})", end='\r')
         if i % 100 == 0:
             times.append(int(time() - then))
             then = time()

@@ -21,7 +21,7 @@ state = env.reset()
 
 if len(sys.argv) == 2:
     if sys.argv[1] == "eval":
-        dqnet = dqn.DQN(name="dqn_default_best")
+        dqnet = dqn.DQN(name="dqn_default")
         dqnet.load()
         dqnet.training = False
         train.test_run(10, dqnet, env, render=True)

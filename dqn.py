@@ -29,8 +29,8 @@ print("CPU DEV HARDCODED")
 CHECKPOINT_DIRECTORY = "checkpoints"
 LOG_DIRECTORY = "logs"
 
-ACT_SPACE_SIZE = 2
-OBS_SPACE_SIZE = 4
+ACT_SPACE_SIZE = 3
+OBS_SPACE_SIZE = 1*4*240*320
 
 class ConvNet(nn.Module):
     def __init__(self):
@@ -46,38 +46,49 @@ class ConvNet(nn.Module):
         #32*60*80
         self.mp1 = nn.MaxPool2d(2)
         #32*30*40
-        self.bn1 = nn.BatchNorm1d(32)
+        #self.bn1 = nn.BatchNorm1d(32)
         self.conv2 = nn.Conv2d(32, 64, 4, 2, 1)
         #64*15*20
-        self.bn2 = nn.BatchNorm1d(64)
+        #self.bn2 = nn.BatchNorm1d(64)
         self.conv3 = nn.Conv2d(64, 64, 3, 1)
         #64*18*13
-        self.bn3 = nn.BatchNorm1d(64)
+        #self.bn3 = nn.BatchNorm1d(64)
         #64*18*13 is 14976, plus the two non-screen inputs
-        self.fc1 = nn.Linear(64*18*13+2, 512)
+        self.fc1 = nn.Linear(64*18*13, 512)
         self.fc2 = nn.Linear(512, 3)
         self.lrelu = nn.LeakyReLU()
 
-    def forward(self, x):
-        out = self.conv1(x)
+    def forward(self, X):
+        img = torch.reshape(X, (-1, 4, 240, 320))
+        batch_size = img.shape[0]
+        #img = torch.reshape(X[:-2], (3*4, 240, 320))
+        #gamevar = torch.reshape(X[-2:], (2))
+        out = self.conv1(img)
         out = self.mp1(out)
-        out = self.bn1(out)
+        #out = self.bn1(out)
         out = self.lrelu(out)
         out = self.conv2(out)
-        out = self.bn2(out)
+        #out = self.bn2(out)
         out = self.lrelu(out)
         out = self.conv3(out)
-        out = self.bn3(out)
+
+        out = torch.reshape(out, (batch_size, 1, -1))
+        #out = torch.flatten(out)
+        #out = torch.concat([out, gamevar], 1)
+
+        #out = self.bn3(out)
         out = self.lrelu(out)
         out = self.fc1(out)
         out = self.lrelu(out)
         out = self.fc2(out)
 
-        return out
+        return torch.squeeze(out)
 
 class DQN(nn.Module):
-    def __init__(self, name=None, criterion=nn.MSELoss, discount=0.99, buffer_size=1000000, epsilon_end=1000000):
+    def __init__(self, name=None, criterion=nn.MSELoss, discount=0.99, buffer_size=10000, epsilon_end=1000000):
         super(DQN, self).__init__()
+
+        loaded = False
 
         self.name = name
         self.log = None
@@ -88,9 +99,11 @@ class DQN(nn.Module):
 
         if name==None or not os.path.exists(os.path.join(CHECKPOINT_DIRECTORY, name)):
             self.episode = 0
+            self.frames = 0
             self.epsilon = DecayingValue(1, 1/epsilon_end, "arithmetic")
         else:
             self.load()
+            loaded = True
 
         #We need to log if given a name, regardless of whether or not the log exists already
         if name:
@@ -116,8 +129,10 @@ class DQN(nn.Module):
         #print("req_loaded")
         #print(self.target.requires_grad_())
 
-        self.optimizer = optim.Adam(self.network.parameters())
         self.train_counter = 0
+
+        if not loaded:
+            self.optimizer = optim.Adam(self.network.parameters())
 
     def save(self, name=None):
         if not name:
@@ -130,6 +145,7 @@ class DQN(nn.Module):
             'optimizer': self.optimizer,
             'network': self.network,
             'epsilon': self.epsilon,
+            'frames': self.frames
             }, os.path.join(CHECKPOINT_DIRECTORY, name))
 
     def load(self):
@@ -138,6 +154,7 @@ class DQN(nn.Module):
         self.optimizer = checkpoint['optimizer']
         self.episode = checkpoint['episode']
         self.epsilon = checkpoint['epsilon']
+        self.frames = checkpoint['frames']
 
     def __del__(self):
         if self.log:
@@ -169,9 +186,10 @@ class DQN(nn.Module):
         return self.network(X.to(DEVICE))
 
     def get_action(self, X):
-        if len(X.shape) == 1:
-            X = X.unsqueeze(0)
-            self.network.eval()
+        #if len(X.shape) == 1:
+            #X = X.unsqueeze(0)
+            #self.network.eval()
+        self.network.eval()
         if self.training == True:
             if self.epsilon:
                 if random.random() < self.epsilon():
@@ -186,7 +204,11 @@ class DQN(nn.Module):
     #Return the most valuable action
     def get_rand_action(self, X):
         soft_pred = self.predict(X)
-        soft_pred = nn.functional.softmax(soft_pred, dim=1)
+        if len(soft_pred.shape) == 1:
+            dimension = 0
+        else:
+            dimension = 1
+        soft_pred = nn.functional.softmax(soft_pred, dim=dimension)
         return list(self.chooser(soft_pred, 1))[0]
 
     def get_epsilon_action(self, X):
@@ -194,7 +216,11 @@ class DQN(nn.Module):
 
     def get_best_action(self, X):
         soft_pred = self.predict(X)
-        return int(torch.argmax(soft_pred, dim=1))
+        if len(soft_pred.shape) == 1:
+            dimension = 0
+        else:
+            dimension = 1
+        return int(torch.argmax(soft_pred, dim=dimension))
 
     #Return the highest value of the input, expects the input to be the output of the network
     def get_best_value(self, X):
@@ -207,8 +233,10 @@ class DQN(nn.Module):
         self.buffer.add_state(prev_state, reward, action, done)
         if not self.buffer.ok_to_sample(BATCH_SIZE):
             return
-    
+
+        self.frames += 1
         self.train_counter += 1
+
         if self.train_counter % 15000 == 0:
             print("Don't forget this one")
             self.target.load_state_dict(self.network.state_dict())
