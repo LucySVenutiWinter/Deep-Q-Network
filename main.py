@@ -1,16 +1,14 @@
-import gym
-from vizdoom import gym_wrapper
+import vizdoom
 
 import train
 import dqn
 
 import sys
 
-ENVIRONMENT = "VizdoomDefendLine-v0"
+import os
 
-env = gym.make(ENVIRONMENT)
-
-state = env.reset()
+game = vizdoom.DoomGame()
+game.load_config(os.path.join(vizdoom.scenarios_path, "defend_the_line.cfg"))
 
 def print_help():
     print(f"Usage: {sys.argv[0]} <mode> <name> <value>")
@@ -41,10 +39,14 @@ if len(sys.argv) > 2:
         dqnet = dqn.DQN(name=name)
         dqnet.load()
         dqnet.training = False
-        train.test_run(num_in, dqnet, env, render=True)
+        game.set_window_visible(True)
+        game.init()
+        train.test_run(num_in, dqnet, game)
     elif sys.argv[1] == "train":
         dqnet = dqn.DQN(name=name)
-        train.train_episodes(num_in, dqnet, env, log=True)
+        game.set_window_visible(False)
+        game.init()
+        train.train_episodes(num_in, dqnet, game, log=True)
     else:
         print_help()
 else:

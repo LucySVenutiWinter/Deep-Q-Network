@@ -4,7 +4,7 @@ This repository implements a deep Q network inspired by the one developed by Mni
 
 ### Prerequisites
 
-This code relies on [openai gym](https://www.gymlibrary.ml/) and [ViZDOOM](http://vizdoom.cs.put.edu.pl/), both of which can be installed via pip, as well as PyTorch.
+This code relies on [ViZDoom](http://vizdoom.cs.put.edu.pl/), which can be installed via pip, as well as PyTorch.
 
 ### Scenario
 
@@ -14,7 +14,7 @@ The input space consists of a 320 by 240 RGB pixel screen, along with two number
 <img src="figures/example.gif" "GIF of a trained agent playing the first six seconds of the scenario.")
 </p>
 
-(Doom's art is not public domain, so ViZDOOM comes with different images. You can replace them if you own an original copy of Doom, but I chose to use the default ViZDOOM art, since it shouldn't make much of a difference to the agent.)
+(Doom's art is not public domain, so ViZDoom comes with different images. You can replace them if you own an original copy of Doom, but I chose to use the default ViZDoom art, since it shouldn't make much of a difference to the agent.)
 
 ## Quick background
 
