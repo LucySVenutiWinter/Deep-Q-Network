@@ -22,8 +22,8 @@ try:
 except:
     DEVICE = "cpu"
 
+#Comment out if you want to use CUDA - don't forget the twin in train.py
 DEVICE = "cpu"
-print("CPU DEV HARDCODED")
 
 
 CHECKPOINT_DIRECTORY = "checkpoints"

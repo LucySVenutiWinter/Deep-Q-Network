@@ -16,25 +16,29 @@ try:
 except:
     DEVICE = "cpu"
 
+#Comment out if you want to use CUDA - don't forget the twin in dqn.py
 DEVICE = "cpu"
-print("CPU DEV HARDCODED")
 
 #Default reward shaping/feature translation function
 null_f = lambda x: x
 
-#Necessary for easy code alteration - sometimes states are tensors, but sometimes not.
+#Converts the elements of input 'rgb' in the state dictionary to [-1, 1] singles
 def state_to_device(state):
     for key in state.keys():
         state[key] = torch.tensor(state[key], dtype=torch.float32).to(DEVICE)
         if key == 'rgb':
             state[key] = torch.permute(state[key], (2, 0, 1))
-            state[key] = torch.sum(state[key], 0)/(255*3)*2-1
+            state[key] = torch.sum(state[key], 0) / (255*3)#Normalize to [0, 1]
+            state[key] = state[key] * 2 - 1#Convert to [-1, 1]
     return state
 
+#Env cannot be reset directly, as it returns a single frame for state
 def resetter(env):
     state = env.reset()
     state = state_to_device(state)
-    states = [state, state, state, state]
+    states = []
+    for _ in range(STEPS):
+        states.append(state)
 
     rgb_states = [state['rgb'] for state in states]
     rgb_states = torch.concat(rgb_states, 0)
@@ -42,10 +46,12 @@ def resetter(env):
 
     return state
 
-def convert_to_input(rgb_states):
-    rgb_1d = torch.reshape(rgb_states, (-1, 1*STEPS*240*320))
-    return torch.squeeze(rgb_1d)
+#Converts an input array to one dimensional form
+def convert_to_input(states):
+    states_1d = torch.reshape(states, (-1, 1*STEPS*240*320))
+    return torch.squeeze(states_1d)
 
+#Given an action, repeatedly steps env with it
 def step_aggregator(env, action):
     states = []
     rewards = []
@@ -69,6 +75,7 @@ def step_aggregator(env, action):
     rewards = sum(rewards)
     return states, rewards, done, infos
 
+#Runs the approximator n times in evaluation mode.
 def test_run(n, approximator, env, render=False):
     for i in range(n):
         state = resetter(env)
@@ -138,7 +145,7 @@ def train_episodes(num_episodes, approximator, env, shape_f=null_f, feature_f=nu
         total_reward = sum(reward_history)
         frames += len(reward_history)
         tally += total_reward
-        print(f"Reward for {i} ({frames} frames): {total_reward:3.1f} (peak: {highest_tally:3.1f} prev: {last_tally:3.1f}) ({torch.cuda.memory_allocated()}) ({approximator.episode})", end='\r')
+        print(f"Reward for episode {i} ({frames} frames): {int(total_reward)} (peak: {highest_tally} prev: {last_tally}) (network episode {approximator.episode})", end='\r')
         if i % 100 == 0:
             times.append(int(time() - then))
             then = time()
