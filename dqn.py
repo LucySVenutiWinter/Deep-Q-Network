@@ -46,13 +46,10 @@ class ConvNet(nn.Module):
         #32*60*80
         self.mp1 = nn.MaxPool2d(2)
         #32*30*40
-        #self.bn1 = nn.BatchNorm1d(32)
         self.conv2 = nn.Conv2d(32, 64, 4, 2, 1)
         #64*15*20
-        #self.bn2 = nn.BatchNorm1d(64)
         self.conv3 = nn.Conv2d(64, 64, 3, 1)
         #64*18*13
-        #self.bn3 = nn.BatchNorm1d(64)
         #64*18*13 is 14976, plus the two non-screen inputs
         self.fc1 = nn.Linear(64*18*13, 512)
         self.fc2 = nn.Linear(512, 3)
@@ -61,22 +58,15 @@ class ConvNet(nn.Module):
     def forward(self, X):
         img = torch.reshape(X, (-1, 4, 240, 320))
         batch_size = img.shape[0]
-        #img = torch.reshape(X[:-2], (3*4, 240, 320))
-        #gamevar = torch.reshape(X[-2:], (2))
         out = self.conv1(img)
         out = self.mp1(out)
-        #out = self.bn1(out)
         out = self.lrelu(out)
         out = self.conv2(out)
-        #out = self.bn2(out)
         out = self.lrelu(out)
         out = self.conv3(out)
 
         out = torch.reshape(out, (batch_size, 1, -1))
-        #out = torch.flatten(out)
-        #out = torch.concat([out, gamevar], 1)
 
-        #out = self.bn3(out)
         out = self.lrelu(out)
         out = self.fc1(out)
         out = self.lrelu(out)
@@ -120,14 +110,8 @@ class DQN(nn.Module):
 
         self.target = type(self.network)()
         self.target.to(DEVICE)
-        #print("req_natural")
-        #print(self.target.requires_grad_())
         self.target.requires_grad_(False)
-        #print("req_setfalse")
-        #print(self.target.requires_grad_())
         self.target.load_state_dict(self.network.state_dict())
-        #print("req_loaded")
-        #print(self.target.requires_grad_())
 
         self.train_counter = 0
 
@@ -186,9 +170,6 @@ class DQN(nn.Module):
         return self.network(X.to(DEVICE))
 
     def get_action(self, X):
-        #if len(X.shape) == 1:
-            #X = X.unsqueeze(0)
-            #self.network.eval()
         self.network.eval()
         if self.training == True:
             if self.epsilon:
@@ -201,7 +182,7 @@ class DQN(nn.Module):
         else:
             return self.get_best_action(X)
 
-    #Return the most valuable action
+    #Sample from softmax'd outputs, essentially using SoftQ
     def get_rand_action(self, X):
         soft_pred = self.predict(X)
         if len(soft_pred.shape) == 1:
@@ -237,8 +218,7 @@ class DQN(nn.Module):
         self.frames += 1
         self.train_counter += 1
 
-        if self.train_counter % 15000 == 0:
-            print("Don't forget this one")
+        if self.train_counter % 10 == 0:
             self.target.load_state_dict(self.network.state_dict())
             self.target.requires_grad_(False)
             self.train_counter = 0
