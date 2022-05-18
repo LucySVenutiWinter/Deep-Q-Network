@@ -9,7 +9,7 @@ This repository implements a deep Q network inspired by the one developed by Mni
 The input space consists of a 320 by 240 RGB pixel screen, along with two numbers corresponding to ammunition and health. The action space consists of three discrete options: turn left, turn right, and attack. The goal is to kill as many enemies as possible. There are three melee-only and three ranged enemies, all of which respawn with more health soon after being killed.
 
 <p align="center">
-<img src="figures/example.png" "GIF of a trained agent playing the first six seconds of the scenario.")
+<img src="figures/example.gif" "GIF of a trained agent playing the first six seconds of the scenario.")
 </p>
 
 (Doom's art is not public domain, so ViZDoom comes with different images. You can replace them if you own an original copy of Doom, but I chose to use the default ViZDoom art, since it shouldn't make much of a difference to the agent.)
