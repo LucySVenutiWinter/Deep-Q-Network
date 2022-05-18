@@ -13,27 +13,29 @@ env = gym.make(ENVIRONMENT)
 state = env.reset()
 
 def print_help():
-    print(f"Usage: {sys.argv[0]} <mode> <value> <name>")
+    print(f"Usage: {sys.argv[0]} <mode> <name> <value>")
     print("Mode must be either \"train\" or \"eval\"")
+    print("Name can be any name which can be saved to disk")
     print("If in train mode, train for value episodes")
     print("If in eval mode, show value episodes")
-    print("If name is not given, \"dqn_default\" is used")
+    print("If value is invalid or not given, it's set to 10 for eval and 10000 for train")
 
-if len(sys.argv) > 1 and len(sys.argv) < 5:
-    if len(sys.argv) < 4:
-        name = "dqn_default"
-    else:
-        name = sys.argv[3]
+if len(sys.argv) > 2:
+    name = sys.argv[2]
 
+    num_in = 0
     try:
-        num_in = int(sys.argv[2])
+        num_in = int(sys.argv[3])
     except:
+        pass
+
+    if num_in < 1:
         if sys.argv[1] == "eval":
             num_in = 10
-            print(f"Given no or bad number, assuming {num_in}")
-        elif sys.argv[1] == "train":
+        if sys.argv[1] == "train":
             num_in = 10000
-            print(f"Given no or bad number, assuming {num_in}")
+        if num_in >= 1:
+            print(f"Setting number of episodes to default ({num_in} for {sys.argv[1]})")
 
     if sys.argv[1] == "eval":
         dqnet = dqn.DQN(name=name)
