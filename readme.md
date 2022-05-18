@@ -1,8 +1,10 @@
 # About
 
-This repository implements a deep Q network inspired by the one developed by Mnih et al. (2016). I have always found the idea of machines learning to play games interesting, so this project was a natural choice. Rather than play Atari games, like in the original paper, I decided to make a network learn a somewhat more visually complex game, Doom.
+This repository implements a deep Q network inspired by the one developed by Mnih et al. (2015). I have always found the idea of machines learning to play games interesting, so this project was a natural choice. Rather than play Atari games, like in the original paper, I decided to make a network learn a somewhat more visually complex game, Doom.
 
 ## Prerequisites
+
+This code relies on [openai gym](https://www.gymlibrary.ml/) and [ViZDOOM](http://vizdoom.cs.put.edu.pl/), both of which can be installed via pip.
 
 ## Scenario
 
@@ -12,7 +14,7 @@ The input space consists of a 320 by 240 RGB pixel screen, along with two number
 <img src="figures/example.gif" "GIF of a trained agent playing the first six seconds of the scenario.")
 </p>
 
-(Doom's art is not public domain, so ViZDoom comes with different images. You can replace them if you own an original copy of Doom, but I chose to use the default ViZDoom art, since it shouldn't make much of a difference to the agent.)
+(Doom's art is not public domain, so ViZDOOM comes with different images. You can replace them if you own an original copy of Doom, but I chose to use the default ViZDOOM art, since it shouldn't make much of a difference to the agent.)
 
 # Quick background
 
@@ -60,3 +62,9 @@ Correlated updates can cause problems with learning. This is true for all neural
 # Running the code
 
 Invoke the code with "python main.py <mode> <name> <value>", where mode is either eval or train (to evaluate or train a network, respectively), name is a string used to identify the network, and value is any positive integer (and defines the number of episodes to evaluate/train over). The name must be legal for filepaths, as it is used to save and load the network. If value is not given or is invalid, it's set to 10 for eval mode and 10,000 for train mode.
+
+# References
+
+Mnih, V., Kavukcuoglu, K., Silver, D., Rusu, A. A., Veness, J., Bellemare, M. G., ... & Hassabis, D. (2015). Human-level control through deep reinforcement learning. nature, 518(7540), 529-533.
+
+Sutton, R. S., & Barto, A. G. (2018). Reinforcement learning: An introduction. MIT press.
