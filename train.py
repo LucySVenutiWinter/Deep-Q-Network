@@ -130,11 +130,11 @@ def train_episodes(num_episodes, approximator, env, seed=None, log=False, render
         total_reward = sum(reward_history)
         frames += len(reward_history)
         tally += total_reward
-        print(f"Reward for episode {i} ({frames} frames): {int(total_reward)} (peak: {highest_tally} prev: {last_tally}) (network episode {approximator.episode})", end='\r')
+        print(f"Reward for episode {i} ({frames} frames): {int(total_reward)} (peak: {highest_tally:3.1f} prev: {last_tally:3.1f}) (network trained for {approximator.episode} total episodes)", end='\r')
         if i % 100 == 0:
             times.append(int(time() - then))
             then = time()
-            print(f"Reward for last hundred averages to {tally/100:3.3f}")
+            print(f"\nReward for last hundred averages to {tally/100:3.3f}")
             last_tally = tally / 100
             if last_tally > highest_tally:
                 highest_tally = last_tally
