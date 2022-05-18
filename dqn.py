@@ -123,7 +123,10 @@ class DQN(nn.Module):
             }, os.path.join(CHECKPOINT_DIRECTORY, name))
 
     def load(self):
-        checkpoint = torch.load(os.path.join(CHECKPOINT_DIRECTORY, self.name))
+        check_name = os.path.join(CHECKPOINT_DIRECTORY, self.name)
+        if not os.path.exists(check_name):
+            raise RuntimeError(f"Tried to load nonexistent file {check_name}")
+        checkpoint = torch.load(check_name)
         self.network = checkpoint['network']
         self.optimizer = checkpoint['optimizer']
         self.episode = checkpoint['episode']
@@ -144,7 +147,7 @@ class DQN(nn.Module):
             self.log = open(filename, 'w')
             self.log.write("episode,reward,Q\n")
 
-    #Log the results of an episode. Note that this increments the episode number.
+    #Log the results of an episode. Note: this increments the episode number.
     def log_episode(self, total_rewards, q_episode=None):
         if not self.log:
             raise Exception("Tried to log an episode with no open log")
@@ -193,7 +196,7 @@ class DQN(nn.Module):
             dimension = 1
         return int(torch.argmax(soft_pred, dim=dimension))
 
-    #Return the highest value of the input, expects the input to be the output of the network
+    #Return the highest value of the input, which should be the network output
     def get_best_value(self, X):
         val, _ = torch.max(X, dim=1)
         return val
@@ -208,7 +211,7 @@ class DQN(nn.Module):
         self.frames += 1
         self.train_counter += 1
 
-        if self.train_counter % 10 == 0:
+        if self.train_counter % 5000 == 0:
             self.target.load_state_dict(self.network.state_dict())
             self.target.requires_grad_(False)
             self.train_counter = 0
@@ -302,7 +305,7 @@ class ExperienceBuffer():
         of the terminal state. Thus, returning a vector where terminal states are marked with zeros
         and nonterminal ones with ones allows a simple broadcast multiplication to set the value
         of any terminal state's successor to zero while preserving values of nonterminal states.
-        The terminal states' successors are actually the first state of the next episode, anyway."""
+        The terminal state's successor in memory is actually the first state of the next episode, anyway."""
     def __init__(self, size, state_size):
         """Initialization parameters:
             size (int): The number of examples to save.
