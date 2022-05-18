@@ -38,15 +38,12 @@ def resetter(env):
 
     rgb_states = [state['rgb'] for state in states]
     rgb_states = torch.concat(rgb_states, 0)
-    #gamevar = states[-1]['gamevariables']
-    state = convert_to_input(rgb_states)#, gamevar)
+    state = convert_to_input(rgb_states)
 
     return state
 
-def convert_to_input(rgb_states):#, gamevar):A
+def convert_to_input(rgb_states):
     rgb_1d = torch.reshape(rgb_states, (-1, 1*STEPS*240*320))
-    #gv_1d = torch.reshape(gamevar, (-1, 2))
-    #states = torch.concat([rgb_1d, gv_1d], 1)
     return torch.squeeze(rgb_1d)
 
 def step_aggregator(env, action):
@@ -67,12 +64,8 @@ def step_aggregator(env, action):
 
     rgb_states = [state['rgb'] for state in states]
     rgb_states = torch.concat(rgb_states, 0)
-    #gamevar = states[-1]['gamevariables']
 
-    states = convert_to_input(rgb_states)#, gamevar)
-    #print("RGB STATES ARE")
-    #print(rgb_states.shape)
-    #raise Exception
+    states = convert_to_input(rgb_states)
     rewards = sum(rewards)
     return states, rewards, done, infos
 
@@ -85,12 +78,11 @@ def test_run(n, approximator, env, render=False):
             now = time()
             state, reward, done, _ = step_aggregator(env, approximator.get_action(state))
             rewards.append(reward)
-            #state = state_to_device(state)
             if render:
                 env.render()
             while (time() - now) < 1/10:
                 pass
-        print(f"For {i}, {sum(rewards):3.3f}")
+        print(f"For {i+1}, {sum(rewards):3.3f}")
 
 def train_episode(approximator, env, shape_f=null_f, feature_f=null_f, seed=None, render=False):
     """Trains approximator on env for one episode.
@@ -114,7 +106,6 @@ def train_episode(approximator, env, shape_f=null_f, feature_f=null_f, seed=None
         new_state, reward, done, _ = step_aggregator(env, action)
         if render:
             env.render()
-        #new_state = state_to_device(new_state)
         action = torch.tensor(action).to(DEVICE)
         reward = torch.tensor(reward, dtype=torch.float32).to(DEVICE)
         approximator.train(feature_f(state), action, feature_f(new_state), shape_f(reward), done)
@@ -151,7 +142,7 @@ def train_episodes(num_episodes, approximator, env, shape_f=null_f, feature_f=nu
         if i % 100 == 0:
             times.append(int(time() - then))
             then = time()
-            print(f"Reward for last hundred averages to {tally/100:3.3f}")# times is {times}")
+            print(f"Reward for last hundred averages to {tally/100:3.3f}")
             last_tally = tally / 100
             if last_tally > highest_tally:
                 highest_tally = last_tally
