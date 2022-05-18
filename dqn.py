@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-import numpy as np
-
 import os
 
 from functools import partial
@@ -16,8 +14,8 @@ BATCH_SIZE = config.BATCH_SIZE
 STEPS = config.STEPS
 DEVICE = config.DEVICE
 
-CHECKPOINT_DIRECTORY = "checkpoints"
-LOG_DIRECTORY = "logs"
+CHECKPOINT_DIRECTORY = config.CHECKPOINT
+LOG_DIRECTORY = config.LOG
 
 ACT_SPACE_SIZE = config.ACT_SPACE
 OBS_SPACE_SIZE = 1*STEPS*240*320

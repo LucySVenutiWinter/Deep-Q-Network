@@ -9,9 +9,6 @@ import config
 STEPS = config.STEPS
 DEVICE = config.DEVICE
 
-#Default reward shaping/feature translation function
-null_f = lambda x: x
-
 #Converts the elements of input 'rgb' in the state dictionary to [-1, 1] singles
 def state_to_device(state):
     for key in state.keys():
@@ -81,13 +78,11 @@ def test_run(n, approximator, env, render=False):
                 pass
         print(f"For {i+1}, {sum(rewards):3.3f}")
 
-def train_episode(approximator, env, shape_f=null_f, feature_f=null_f, seed=None, render=False):
+def train_episode(approximator, env, seed=None, render=False):
     """Trains approximator on env for one episode.
     approximator can be any function approximator, but must have two functions:
         get_action(state), and train(prev_state, action, state, reward).
     env is the openai gym environment to learn in.
-    shape_f is a function that takes in a state, reward tuple and returns a possibly shaped reward.
-    feature_f is a function that takes in a state and ouputs a feature vector.
     seed is the seed to seed the environment with. None -> no seed set.
     render is whether or not to render the episode.
     """
@@ -99,19 +94,19 @@ def train_episode(approximator, env, shape_f=null_f, feature_f=null_f, seed=None
     reward_history = []
 
     while not done:
-        action = approximator.get_action(feature_f(state))
+        action = approximator.get_action(state)
         new_state, reward, done, _ = step_aggregator(env, action)
         if render:
             env.render()
         action = torch.tensor(action).to(DEVICE)
         reward = torch.tensor(reward, dtype=torch.float32).to(DEVICE)
-        approximator.train(feature_f(state), action, feature_f(new_state), shape_f(reward), done)
+        approximator.train(state, action, new_state, reward, done)
         state=new_state
         reward_history.append(reward)
 
     return reward_history
 
-def train_episodes(num_episodes, approximator, env, shape_f=null_f, feature_f=null_f, seed=None, log=False, render=False):
+def train_episodes(num_episodes, approximator, env, seed=None, log=False, render=False):
     """Trains approximator for num_episodes. See train_episode for details on args.
     Seed is only set before the first episode, if passed."""
     state = resetter(env)

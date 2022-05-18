@@ -11,6 +11,12 @@ DEVICE = "cpu"
 
 BATCH_SIZE = 32
 
+#Number of frames to stack together for network input
+STEPS = 4
+
 #Size of discrete action space
 ACT_SPACE = 3
 
+#Directories to store checkpoints and logs in
+CHECKPOINT = "checkpoints"
+LOG = "logs"
