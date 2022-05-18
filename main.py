@@ -39,6 +39,7 @@ if len(sys.argv) > 2:
 
     if sys.argv[1] == "eval":
         dqnet = dqn.DQN(name=name)
+        dqnet.load()
         dqnet.training = False
         train.test_run(num_in, dqnet, env, render=True)
     elif sys.argv[1] == "train":
