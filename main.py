@@ -6,26 +6,32 @@ import dqn
 
 import sys
 
-EPISODES = 50000
+EPISODES = 10000
 ENVIRONMENT = "VizdoomDefendLine-v0"
 
 env = gym.make(ENVIRONMENT)
 
-#print("info:")
-#print(env.action_space)
 state = env.reset()
-#print(state.items())
-#print(state['rgb'].shape)
-#raise Exception
 
+def print_help():
+    print(f"Usage: {sys.argv[0]} <mode> <name>")
+    print("Mode must be either \"train\" or \"eval\"")
+    print("If name is not given, \"dqn_default\" is used")
 
-if len(sys.argv) == 2:
+if len(sys.argv) > 1 and len(sys.argv) < 4:
+    if len(sys.argv) < 3:
+        name = "dqn_default"
+    else:
+        name = sys.argv[2]
+
     if sys.argv[1] == "eval":
-        dqnet = dqn.DQN(name="dqn_default")
-        dqnet.load()
+        dqnet = dqn.DQN(name=name)
         dqnet.training = False
         train.test_run(10, dqnet, env, render=True)
-        raise Exception
-
-dqnet = dqn.DQN(name="dqn_default")
-train.train_episodes(EPISODES, dqnet, env, log=True)
+    elif sys.argv[1] == "train":
+        dqnet = dqn.DQN(name=name)
+        train.train_episodes(EPISODES, dqnet, env, log=True)
+    else:
+        print_help()
+else:
+    print_help()
