@@ -8,7 +8,7 @@ This code relies on [ViZDoom](http://vizdoom.cs.put.edu.pl/), which can be insta
 
 ### Scenario
 
-The input space consists of a 320 by 240 RGB pixel screen, along with two numbers corresponding to ammunition and health. The action space consists of three discrete options: turn left, turn right, and attack. The goal is to kill as many enemies as possible. There are three melee-only and three ranged enemies, all of which respawn with more health soon after being killed.
+The input space consists of a 320 by 240 RGB pixel screen. The action space consists of three discrete options: turn left, turn right, and attack. The goal is to kill as many enemies as possible. There are three melee-only and three ranged enemies, all of which respawn with more health soon after being killed.
 
 <p align="center">
 <img src="figures/example.gif" "GIF of a trained agent playing the first six seconds of the scenario.")
@@ -50,8 +50,6 @@ The table below describes the network. Note that PyTorch actually uses CHW order
 | Fully connected | 18x13x64 = 14976 |  |  |  |  | 512 |
 | Leaky ReLU | | | | | | |
 | Fully connected | 512 |  |  |  |  | 3 |
-
-The game provides ammo counts and health as elements of the state, but I chose not to provide these as inputs to the network. The scenario the agent learned provides infinite ammunition, and as the agent has no way of restoring health, the advantage from including it would likely be marginal (though it is possible that it might be useful to give negative rewards when health decreases, to give the agent a better chance of learning to use melee monsters as shields against fireballs).
 
 ### Target network
 
