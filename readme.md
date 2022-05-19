@@ -61,7 +61,7 @@ When an action is taken and the game advanced, Q learning uses the estimate of t
 
 Correlated updates can cause problems with learning. This is true for all neural networks. In supervised learning, it's fairly easy to avoid this by shuffling training data. It's less obvious what to do in the case of reinforcement learning, where an agent experiences temporally meaningful sequences of states. Mnih et al. solved this with a replay buffer. Rather than training on data as it comes in, the network stores its experiences and actions in a circular buffer. Data is drawn from this buffer at random in order to decorrelate updates. An additional advantage to this technique is that it allows easy batching, providing even more stability.
 
-## Hyperparameters
+### Hyperparameters
 
 The network was trained using Torch's default Adam optimizer and batches of size 32. Epsilon-greedy exploration was used, with epsilon decaying linearly from 1 to 0.1 over 1,000,000 frames. The discount factor was 0.99.
 
