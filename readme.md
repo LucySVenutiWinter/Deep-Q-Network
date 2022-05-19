@@ -22,7 +22,7 @@ Reinforcement learning is a large topic, and the implementation here rests on a 
 
 ### Q learning
 
-Q learning is a method of reinforcement learning that doesn't require knowing anything about how actions affect the world, which makes it broadly applicable. In its simplest form, it uses a table to track how effective its actions have been at getting positive outcomes. Frequently, the value is modified such that rewards in the near future are treated as more valuable than those in the far future, but for games as short as the Doom minigame used here, this is unnecessary.
+Q learning is a method of reinforcement learning that doesn't require knowing anything about how actions affect the world, which makes it broadly applicable. In its simplest form, it uses a table to track how effective its actions have been at getting positive outcomes. Frequently, the value is modified such that rewards in the near future are treated as more valuable than those in the far future, but for games as short as the Doom minigame used here, this isn't particularly important.
 
 ### Deep Q learning
 
@@ -60,6 +60,10 @@ When an action is taken and the game advanced, Q learning uses the estimate of t
 ### Replay buffer
 
 Correlated updates can cause problems with learning. This is true for all neural networks. In supervised learning, it's fairly easy to avoid this by shuffling training data. It's less obvious what to do in the case of reinforcement learning, where an agent experiences temporally meaningful sequences of states. Mnih et al. solved this with a replay buffer. Rather than training on data as it comes in, the network stores its experiences and actions in a circular buffer. Data is drawn from this buffer at random in order to decorrelate updates. An additional advantage to this technique is that it allows easy batching, providing even more stability.
+
+## Hyperparameters
+
+The network was trained using Torch's default Adam optimizer and batches of size 32. Epsilon-greedy exploration was used, with epsilon decaying linearly from 1 to 0.1 over 1,000,000 frames. The discount factor was 0.99.
 
 ## Running the code
 
