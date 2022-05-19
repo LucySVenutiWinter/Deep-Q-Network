@@ -36,6 +36,8 @@ I used leaky rectified linear units in between most layers because ReLUs are fas
 
 Rather than being fed direct RGB input, I reduced computational burden and gave the agent some sense of temporality by converting frames to grayscale and then stacking four on top of each other. For this scenario, converting to grayscale by summing the pixel values and then normalizing to [-1, 1] was sufficient.
 
+The table below describes the network. Note that PyTorch actually uses CHW order, but this table presents dimensions in HWC.
+
 | Layer | Input | Filters | Kernel size | Stride | Padding | Output |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | Convolution | 320x240x4 | 32 | 8 | 4 | 2 | 80x60x32 |
