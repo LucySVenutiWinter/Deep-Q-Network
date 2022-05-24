@@ -65,7 +65,7 @@ class ConvNet(nn.Module):
         return torch.squeeze(out)
 
 class DQN(nn.Module):
-    def __init__(self, name=None, criterion=nn.MSELoss, discount=0.99, buffer_size=10000, epsilon_end=1000000):
+    def __init__(self, name=None, criterion=nn.MSELoss, discount=0.99, buffer_size=25000, epsilon_end=500000):
         super(DQN, self).__init__()
 
         loaded = False
