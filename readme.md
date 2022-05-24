@@ -61,11 +61,13 @@ Correlated updates can cause problems with learning. This is true for all neural
 
 ### Hyperparameters
 
-The network was trained using Torch's default Adam optimizer and batches of size 32. Epsilon-greedy exploration was used, with epsilon decaying linearly from 1 to 0.1 over 1,000,000 frames. The discount factor was 0.99.
+The network was trained using Torch's default Adam optimizer and batches of size 32. Epsilon-greedy exploration was used, with epsilon decaying linearly from 1 to 0.1 over 500,000 frames. The discount factor was 0.99. The replay buffer was of size 25,000.
 
 ## Running the code
 
 Invoke the code with "python main.py \<mode\> \<name\> \<value\>", where mode is either eval or train (to evaluate or train a network, respectively), name is a string used to identify the network, and value is any positive integer (and defines the number of episodes to evaluate/train over). The name must be legal for filepaths, as it is used to save and load the network. If value is not given or is invalid, it's set to 10 for eval mode and 10,000 for train mode.
+
+The replay buffer takes up most of my 32 gigabytes of memory; this should be edited in dqn.py if your machine doesn't have that much.
 
 ## References
 
